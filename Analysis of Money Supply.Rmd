@@ -1,0 +1,198 @@
+---
+title: "Analysis of Pandemic Fiscal Responsiveness"
+author: "Matthew Adams"
+date: "2024-05-16"
+output: html_document
+---
+
+#Introduction
+This document is an analysis of several key economic data series and their historical relationship.
+```{r setup, include=FALSE}
+# Set code chunk options
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load and install packages
+pacman::p_load(tidyverse, eFRED, lubridate, zoo, janitor)
+
+# Set key to pull data from FRED
+api_key <- "21489194ba838be7e47627eb82142f3a"
+set_fred_key(api_key)
+```
+<br>
+All data used in this paper is sourced from Federal Reserve Economic Data (FRED). The following is a brief summary of each data series:
+<br>
+<br>
+The M2 money supply includes cash, checking deposits, and easily convertible near money such as savings deposits and money market securities. It provides a broad measure of the money available in the economy.
+
+The S&P 500 index tracks the stock performance of 500 large U.S. companies, representing a key indicator of the overall health of the U.S. stock market. It is widely used as a benchmark for investment performance.
+Gross Domestic Product (GDP)
+
+GDP represents the total market value of all goods and services produced within a country’s borders in a specific period. It serves as a comprehensive measure of a country’s economic health and growth.
+
+The federal funds rate is the interest rate at which banks trade balances held at the Federal Reserve with each other overnight. It is a critical tool for monetary policy, influencing various interest rates and economic activity.
+
+The CPI measures the average change over time in the prices paid by urban consumers for a basket of goods and services. It is a primary indicator of inflation and the cost of living.
+
+```{r data prep, warning = FALSE}
+# Identify series for analysis
+money_supply <- fred(value = "WM2NS")
+stocks <- fred(value = "SP500")
+gdp <- fred(value = "GDP")
+interest_rate <- fred(value = "FEDFUNDS")
+cpi <- fred(value = "CPIAUCSL")
+```
+<br>
+<br>
+<br>
+The first focus of this paper is the relationship of the money supply and inflation, as measured by the CPI. My hypothesis is that the inflationary period we are currently weathering is a byproduct of the massive Quantitative Easing (QE) policies of 2020-21. To simplify QE, this is a form of monetary policy that aims to increase liquidity in the economy. In this case, QE was done through a combination lowering of interest rates and the introduction of multiple stimulus packages. 
+<br>
+<br>
+The theory behind my hypothesis is the basic economic principal that too much money chasing too few goods creates inflationary pressures. The "too much money" in our case would be stimulus packages received by Americans.
+```{r analysis 1, include = FALSE}
+cpi_filtered <- cpi %>% 
+  mutate(year = year(date)) %>% 
+  mutate(month = month(date)) %>%
+  mutate(day = day(date)) %>% 
+  filter(year >= "1975") %>% 
+  select(value, year, month) %>% 
+  rename(cpi = value) %>% 
+  unite(year, month, col = "period", sep = "-")
+
+money_supply_filtered <- money_supply %>% 
+  mutate(year = year(date)) %>% 
+  mutate(month = month(date)) %>%
+  mutate(day = day(date)) %>% 
+  unite(year, month, col = "period", sep = "-") %>% 
+  select(-day) %>%
+  rename(m2 = value)
+
+df <- money_supply_filtered %>% 
+  left_join(cpi_filtered, by = "period") %>% 
+  relocate(period, .before = m2) %>% 
+  mutate(date = as_date(date))
+
+df_long <- df %>% 
+  pivot_longer(cols = c(3:4), names_to = "series", values_to = "value") %>% 
+  group_by(series) %>% 
+  mutate(norm_value = scale(value))
+
+df_filtered <- df %>% 
+  filter(period >= "2020-1")
+
+df_long_filtered <- df_filtered %>% 
+  pivot_longer(cols = c(3:4), names_to = "series", values_to = "value") %>% 
+  group_by(series) %>% 
+  mutate(norm_value = scale(value))
+
+delta <- df_filtered %>% 
+  arrange(desc(date)) %>% 
+  summarise(cpi_delta = (((first(cpi)-last(cpi))/last(cpi))*100),
+            m2_delta = (((first(m2)-last(m2))/last(m2))*100)
+            )
+
+cpi_delta <- delta$cpi_delta
+m2_delta <- delta$m2_delta
+```
+<br>
+It is important to first understand the historical relationship of the money supply and inflation, see figure below. A strong positive correlation can be seen between the two series because an increase in the money supply can lead to higher demand for goods and services, which in turn can drive up prices and inflation.Turning your attention to the 2020-2024 period, it can be seen that there was signicant monetary policy action that increased the money supply, with a subsequent increase in CPI. 
+```{r plotting}
+# Main plot
+historical_plot <- ggplot(df_long, aes(x = date, y = norm_value, group = series, color = series)) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Period",                
+    y = "Normalized Value",     
+    title = "Historical Relationship Between Money Supply and Inflation",
+    color = ""
+  ) +
+  scale_x_date(date_breaks = "5 years", date_minor_breaks = "1 year", date_labels = "%Y") +
+  theme_minimal() +          
+  theme(                     
+    legend.position = "top", 
+    plot.title = element_text(face = "bold"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20)
+  ) +
+  labs(caption = "Data Source: FRED")
+
+historical_plot
+```
+<br>
+Analyzing this 2020-2024 period in the figure below, you get a clearer picture of the timeline of monetary policy and its impacts.The major monetary decisions are as follows:
+
+- March 27, 2020, the Cares Act is signed into law, implementing a $2.2 trillion stimulus package. 
+
+- April 6, 2020, the PPP loan program begins accepting applications. This program granted a total of $798 billion.
+
+- December 21, 2020, The Consolidated Appropriations Act is signed into law, providing $900 billion in additional stimulus funding. 
+
+- March 11, 2021, The American Rescue Plan is signed into law, implementing a $1.9 trillion stimulus package.
+
+Exluding PPP loans, a total of $5 trillion in stimulus funding was passed in a 1 year period. I argue that the PPP loan amount should be included in this total, as the funds were required upfront at the time. This brings total to just south of 6 trillion of approved stimulus.
+
+I'd like to take this moment to point out that this is not an argument over the necessity of the stimulus programs, rather a construction of the timeline of policy that has yielded our current economic situtation. 
+
+So what is this situtation? I assume you are tired of hearing about inflation, so I won't beat a dead horse. There has been a significant increase in prices across the board over the last 3 years. While the rate of increase has slowed to around 4%, it remains 100% above the target of 2%. From January 2020 to April 2024, the CPI has increased `r cpi_delta %>% round(2)`. 
+
+```{r plotting 2}
+# first case of covid in USA
+# cares act signed into law - $2.2 trillion stimulus package
+# ppp loan applications begin - $798 billion total loans
+# consolidated appropriations act - $900 billion additional stimulus funding
+# american rescue plan - $1.9 trillion relief package
+label_data <- data.frame(
+  date = as.Date(c("2020-01-20", "2020-03-27", "2020-04-06", "2020-12-21", "2021-03-11")),
+  label = c("First COVID Case", "CARES Act", "PPP Loan Inception", 
+            "Consolidated Appropriations Act", "American Rescue Plan"),
+  color = c("red", "blue", "green", "orange", "purple")
+)
+
+# Custom color scale for the vertical lines and series
+line_colors <- setNames(label_data$color, label_data$label)
+series_colors <- c("cpi" = "brown", "m2" = "darkcyan")
+
+# Combine both color mappings
+all_colors <- c(series_colors, line_colors)
+
+# Main plot
+main_plot <- ggplot(df_long_filtered, aes(x = date, y = norm_value, group = series, color = series)) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Period",                
+    y = "Normalized Value",     
+    title = "Analysis of Fiscal Policy in Response to COVID Pandemic",   
+    color = "Legend"            
+  ) +
+  scale_x_date(date_breaks = "1 years", date_minor_breaks = "1 month", date_labels = "%Y") +
+  theme_minimal() +          
+  theme(                     
+    legend.position = "top", 
+    plot.title = element_text(face = "bold"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20)
+  ) +
+  labs(caption = "Data Source: FRED") +
+  geom_vline(data = label_data, aes(xintercept = as.numeric(date), color = label), linetype = "solid") +
+  scale_color_manual(values = all_colors) +
+  guides(color = guide_legend(title.position = "top", title.hjust = 0.5))
+
+main_plot
+```
+
+```{r correlation}
+
+cor_test <- cor(df$cpi, df$m2) %>% 
+  print()
+
+cor_plot <- ggplot(df, aes(x = cpi, y = m2)) + 
+  geom_point(color = "blue", size = 2) +  # Customize points
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add line of best fit
+  labs(x = "Consumer Price Index (CPI)", y = "Money Supply (M2)",  # Label axes
+       title = "Scatter Plot with Line of Best Fit") +  # Add title
+  theme_minimal()
+
+cor_plot
+
+# Simple linear regression
+model <- lm(cpi ~ m2, data = df)
+summary(model)
+
+```
