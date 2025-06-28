@@ -5,7 +5,7 @@ date: "2024-05-16"
 output: html_document
 ---
 
-#Introduction
+# Introduction
 This document is an analysis of several key economic data series and their historical relationship.
 ```{r setup, include=FALSE}
 # Set code chunk options
@@ -18,10 +18,8 @@ pacman::p_load(tidyverse, eFRED, lubridate, zoo, janitor)
 api_key <- "21489194ba838be7e47627eb82142f3a"
 set_fred_key(api_key)
 ```
-<br>
 All data used in this paper is sourced from Federal Reserve Economic Data (FRED). The following is a brief summary of each data series:
-<br>
-<br>
+
 The M2 money supply includes cash, checking deposits, and easily convertible near money such as savings deposits and money market securities. It provides a broad measure of the money available in the economy.
 
 The S&P 500 index tracks the stock performance of 500 large U.S. companies, representing a key indicator of the overall health of the U.S. stock market. It is widely used as a benchmark for investment performance.
