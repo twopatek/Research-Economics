@@ -1,7 +1,7 @@
 ---
 title: "Analysis of Real Gross Domestic Product and Related Measures"
 author: "Matthew Adams"
-date: "`r Sys.Date()`"
+date: "2024-02-29"
 output: html_document
 ---
 
