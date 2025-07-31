@@ -1,0 +1,128 @@
+---
+title: "CBO Budget Viz"
+author: "Matthew Adams"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(tidyverse)
+library(janitor)
+library(networkD3)
+
+path_to_file <- "51134-2025-01-Historical-Budget-Data.xlsx"
+```
+
+```{r Revenues}
+df_rev <- read_excel(path_to_file,
+                             sheet = "2. Revenues",
+                             skip  = 7,
+                             n_max = 63) %>%        
+  clean_names() %>%
+  rename(fiscal_year = x1) %>% 
+  pivot_longer(-fiscal_year,
+               names_to  = "category",
+               values_to = "amount") %>% 
+  arrange(desc(fiscal_year))
+```
+
+```{r Outlays}
+df_out <- read_excel(path_to_file,
+                     sheet = "3. Outlays",
+                     skip  = 8,
+                     n_max = 63) %>%      
+  clean_names() %>%
+  rename(fiscal_year = x1)
+  # pivot_longer(-fiscal_year,
+  #              names_to  = "category",
+  #              values_to = "amount") %>% 
+  # arrange(desc(fiscal_year))
+```
+
+```{r Discretionary Outlays}
+df_Disc_out <- read_excel(path_to_file,
+                     sheet = "4. Discretionary Outlays",
+                     skip  = 7,
+                     n_max = 63) %>%      
+  clean_names() %>%
+  rename(fiscal_year = x1)
+  # pivot_longer(-fiscal_year,
+  #              names_to  = "category",
+  #              values_to = "amount") %>% 
+  # arrange(desc(fiscal_year))
+```
+
+```{r Mandatory Outlays}
+df_Mand_out <- read_excel(path_to_file,
+                     sheet = "5. Mandatory Outlays",
+                     skip  = 7,
+                     n_max = 63,
+                     na    = "n.a.") %>%      
+  clean_names() %>%
+  rename(fiscal_year = x1)
+  # pivot_longer(-fiscal_year,
+  #              names_to  = "category",
+  #              values_to = "amount") %>% 
+  # arrange(desc(fiscal_year))
+```
+
+```{r Combined Outlays}
+df_out <- df_out %>% 
+  full_join(df_Disc_out %>% select(-total), by = "fiscal_year") %>% 
+  full_join(df_Mand_out %>% select(-offsetting_receipts, -total), by = "fiscal_year")
+```
+
+```{r Sankey Test Plot}
+# 2. Define your nodes
+nodes <- data.frame(
+  name = c("Income", "Savings", "Expenses", "Investments")
+)
+
+# 3. Define the flows (links)
+#    source/target are zero-based indices into the nodes data.frame
+links <- data.frame(
+  source = c(0,     0,     0,     1),
+  target = c(1,     2,     3,     3),
+  value  = c(5000,  3000,  2000,  1500)
+)
+
+# 4. Create the Sankey diagram
+sankeyNetwork(
+  Links    = links,
+  Nodes    = nodes,
+  Source   = "source",
+  Target   = "target",
+  Value    = "value",
+  NodeID   = "name",
+  fontSize = 12,
+  nodeWidth = 30
+)
+```
+
+```{r Sankey Revenue Plot}
+nodes <- df_rev %>% 
+  distinct(category)
+
+
+#    source/target are zero-based indices into the nodes data.frame
+links <- data.frame(
+  source = c(0,     0,     0,     1),
+  target = c(1,     2,     3,     3),
+  value  = c(5000,  3000,  2000,  1500)
+)
+
+# 4. Create the Sankey diagram
+sankeyNetwork(
+  Links    = links,
+  Nodes    = nodes,
+  Source   = "source",
+  Target   = "target",
+  Value    = "value",
+  NodeID   = "name",
+  fontSize = 12,
+  nodeWidth = 30
+)
+```

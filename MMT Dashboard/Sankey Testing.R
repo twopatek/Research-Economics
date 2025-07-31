@@ -1,5 +1,3 @@
-# 1. Install & load
-install.packages("networkD3")    # run once
 library(networkD3)
 
 # 2. Define your nodes
