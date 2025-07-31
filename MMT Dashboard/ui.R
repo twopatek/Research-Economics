@@ -9,21 +9,72 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
+      # Plot tab with two subtabs
       tabItem(
         tabName = "plot_tab",
-        sidebarPanel(
-          selectInput(
-            "series_name", 
-            "Select series:", 
-            choices = NULL, 
-            multiple = TRUE
-          ),
-          p("Hover over the lines for analytics. "),
-          p("*Shaded areas = GDP recessions"),
-          p("Data source: FRED")
-        ),
-        mainPanel(
-          plotlyOutput("plot", height = "600px")
+        fluidRow(
+          column(
+            width = 12,
+            box(
+              width = 12,
+              tabsetPanel(
+                id = "plot_subtabs",
+                tabPanel(
+                  title = "Plot",
+                  fluidRow(
+                    column(
+                      width = 3,
+                      box(
+                        title = "Series Selection",
+                        solidHeader = TRUE,
+                        status = "info",
+                        width = 12,
+                        pickerInput(
+                          inputId = "series_name",
+                          label = "Select series:",
+                          choices = NULL,
+                          multiple = TRUE,
+                          options = list(
+                            `actions-box` = TRUE,
+                            `live-search` = TRUE,
+                            `selected-text-format` = "count > 3"
+                          )
+                        ),
+                        p("Hover over the lines for analytics."),
+                        p("*Shaded areas = GDP recessions"),
+                        p("Data source: FRED")
+                      )
+                    ),
+                    column(
+                      width = 9,
+                      box(
+                        title = "Output",
+                        solidHeader = TRUE,
+                        status = "warning",
+                        width = 12,
+                        plotlyOutput("plot", height = "600px")
+                      )
+                    )
+                  )
+                ),
+                tabPanel(
+                  title = "Guide",
+                  fluidRow(
+                    column(
+                      width = 12,
+                      box(
+                        title = "Series Guide",
+                        solidHeader = TRUE,
+                        status = "primary",
+                        width = 12,
+                        DTOutput("series_guide_table")
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       ),
       tabItem(
@@ -46,12 +97,12 @@ ui <- dashboardPage(
                      )
                    )
           ),
-          
+
           ### 2) Recession Impact (placeholder) ###
           tabPanel("Recession Impact",
                    h4("Coming soon…")
           ),
-          
+
           ### 3) Volatility & Alerts (placeholder) ###
           tabPanel("Volatility & Alerts",
                    h4("Coming soon…")

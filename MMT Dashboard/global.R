@@ -6,6 +6,8 @@ library(shiny)
 library(shinydashboard)
 library(shinyWidgets)
 library(scales)
+library(DT)
+library(memoise)
 
 # set key to pull data from FRED
 api_key <- "21489194ba838be7e47627eb82142f3a"
@@ -39,19 +41,16 @@ series_list <- list(
 )
 
 
-# map function to generate series titles
-series <- ""
-
-get_series_info <- function(series) {
-  df <- fred(series, all = FALSE)
-  print(str(df))
-  notes <- attr(df, "info")
-}
-
-series_info <- map_dfr(series_list, ~get_series_info(.))
-
-# series_titles <- titles %>% 
-#   select(id, title)
+# # map function to generate series informationn
+# series <- ""
+# 
+# get_series_info <- function(series) {
+#   df <- fred(series, all = FALSE)
+#   print(str(df))
+#   notes <- attr(df, "info")
+# }
+# 
+# series_info <- map_dfr(series_list, ~get_series_info(.))
 
 series_meta <- tibble(
   series_id   = names(series_list),
@@ -73,11 +72,17 @@ series_meta <- tibble(
   )
 )
 
+# Create a memoised version of fred()
+fred_cached <- memoise(function(series_code) {
+  fred(series = series_code, all = FALSE) %>% as_tibble()
+})
+
+
 df <- series_meta %>% 
   mutate(
     raw = map(
       series_code,
-      ~ fred(series = .x, all = FALSE) %>%
+      ~ fred_cached(.x) %>%
         as_tibble()             
     )
   ) %>% 
@@ -90,3 +95,7 @@ df <- series_meta %>%
   ) %>% 
   ungroup() %>% 
   arrange(series_id)
+
+df <- df %>% 
+  filter(!is.na(series))
+
