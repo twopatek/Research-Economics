@@ -1,0 +1,13 @@
+name: MMT-Dashboard
+title: MMT-Dashboard
+username: matthew-apps
+account: matthew-apps
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15143866
+bundleId: 10702722
+url: https://matthew-apps.shinyapps.io/MMT-Dashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Analysis of Money Supply working file.Rmd|Analysis of Money Supply.Rmd|Analysis-of-Money-Supply.html|BLS Analysis.Rmd|BLS Analysis.xlsx|BLS-Analysis.html|CBO Budget Projections.xlsx|CopyOfGDP Rmd.Rmd|Credit_Health_Dashboard.R|Default Rate Analysis.Rmd|Economic_Data_Dashboard.R|FY23 GDP Revision Summary.xlsx|GDP Rmd.Rmd|gdp_scratch.R|GDP-Rmd.html|Nonfarm Payroll Analysis.xlsx|README.md|Series to Explore.docx

@@ -5,8 +5,6 @@ library(eFRED)
 library(shiny)
 library(shinydashboard)
 library(shinyWidgets)
-library(RColorBrewer)
-library(readxl)
 library(scales)
 
 # set key to pull data from FRED
