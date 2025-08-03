@@ -1,21 +1,86 @@
-# server
+# ---- SERVER ----
 server <- function(input, output, session) {
   # populate the series selector once df is ready
   observe({
     updatePickerInput(
       session, 
       "series_name", 
-      choices = sort(unique(df$series_name)),
+      choices  = sort(unique(df$series_name)),
       selected = unique(df$series_name)[1]
     )
   })
   
-  # filter by series AND date‐range
-  filtered_data <- reactive({
+  # 2) reactive that returns min/max dates for the currently‐selected series
+  sel_span <- reactive({
     req(input$series_name)
+    sel <- df %>% filter(series_name %in% input$series_name)
+    list(
+      min = min(sel$date, na.rm = TRUE),
+      max = max(sel$date, na.rm = TRUE)
+    )
+  })
+  
+  # 3) whenever series change, reset the date_range to full span of those series
+  observeEvent(sel_span(), {
+    updateDateRangeInput(
+      session,
+      "date_range",
+      start = sel_span()$min,
+      end   = sel_span()$max
+    )
+  })
+  
+  # 4) quick‐select observers using sel_span()
+  observeEvent(input$btn_6m, {
+    end   <- sel_span()$max
+    start <- end %m-% months(6)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  observeEvent(input$btn_1y, {
+    end   <- sel_span()$max
+    start <- end %m-% years(1)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  observeEvent(input$btn_5y, {
+    end   <- sel_span()$max
+    start <- end %m-% years(5)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  observeEvent(input$btn_10y, {
+    end   <- sel_span()$max
+    start <- end %m-% years(10)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  observeEvent(input$btn_20y, {
+    end   <- sel_span()$max
+    start <- end %m-% years(20)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  observeEvent(input$btn_30y, {
+    end   <- sel_span()$max
+    start <- end %m-% years(30)
+    updateDateRangeInput(session, "date_range", start = start, end = end)
+  })
+  
+  # 5) reset button also uses sel_span()
+  observeEvent(input$btn_reset, {
+    updateDateRangeInput(
+      session,
+      "date_range",
+      start = sel_span()$min,
+      end   = sel_span()$max
+    )
+  })
+  
+  
+  # filter by series AND date-range
+  filtered_data <- reactive({
+    req(input$series_name, input$date_range)
     df %>% 
       filter(
-        series_name %in% input$series_name
+        series_name %in% input$series_name,
+        date >= input$date_range[1],
+        date <= input$date_range[2]
       )
   })
   
@@ -26,11 +91,21 @@ server <- function(input, output, session) {
   
   output$plot <- renderPlotly({
     
-    d <- filtered_data()
+    plot_df <- filtered_data() %>%
+      group_by(series_name) %>%
+      mutate(
+        scaled = (series - min(series, na.rm=TRUE)) /
+          ( max(series, na.rm=TRUE) - min(series, na.rm=TRUE) )
+      ) %>%
+      ungroup()
     
-    plot_ly(d, x = ~date) %>%
+    # compute dynamic y‐limits
+    y_min <- min(plot_df$scaled, na.rm = TRUE)
+    y_max <- max(plot_df$scaled, na.rm = TRUE)
+    
+    plot_ly(plot_df, x = ~date) %>%
       add_lines(
-        y = ~value_norm, 
+        y = ~scaled, 
         name = ~series_name,
         text = ~paste0(
           "Series: ", series_name,
@@ -43,8 +118,17 @@ server <- function(input, output, session) {
       ) %>%
       layout(
         title = "Historical Data of Consumer Financial Health",
-        xaxis = list(rangeslider = list(type = "period")),
-        yaxis = list(title = "Normalized Value"),
+        xaxis = list(
+          range = list(
+            as.character(input$date_range[1]),
+            as.character(input$date_range[2])
+          ),
+          title = "Date"
+          ),
+        yaxis = list(
+          range = c(y_min, y_max),
+          title = "Normalized Value"
+        ),
         showlegend = FALSE,
         legend = list(x = 0, y = -0.2, font = list(size = 10)),
         plot_bgcolor = "#f7f7f7",
@@ -113,9 +197,11 @@ server <- function(input, output, session) {
     tibble(
       `Series Name` = c(
         "Yield Curve (T10Y2YM)",
-        "Interest Payments (A091RC1Q027SBEA)",
+        "Nonfarm Payroll (PAYEMS)",
+        "Unemployment Rate (UNRATE)",
         "Total Public Debt (GFDEBTN)",
         "Federal Surplus/Deficit (FYFSD)",
+        "Interest Payments (A091RC1Q027SBEA)",
         "Nominal GDP (GDP)",
         "Headline CPI (CPIAUCSL)",
         "Core CPI (CPILFESL)",
@@ -129,11 +215,15 @@ server <- function(input, output, session) {
       Description = c(
         "The difference between the 10-year and 2-year U.S. Treasury interest rates. A negative value (called an 'inverted yield curve') often signals a potential economic recession, while a positive value typically reflects confidence in future growth.",
         
-        "The total amount of money the federal government pays each quarter in interest on its debt. Higher interest payments can indicate rising borrowing costs or growing debt burdens, affecting the federal budget and financial stability.",
+        "Nonfarm Payroll Employment (PAYEMS) measures the total number of paid U.S. workers excluding farm workers, private household employees, and nonprofit organization employees. It’s a key indicator of labor market strength and overall economic activity.",
+        
+        "Civilian Unemployment Rate (UNRATE) represents the percentage of the civilian labor force that is unemployed and actively seeking work. It’s one of the primary gauges of labor market slack and economic health.",
         
         "The total amount of money the U.S. government owes to creditors. This includes all federal debt held by the public and by government accounts. It reflects how much the government has borrowed over time to finance deficits.",
         
         "The difference between what the federal government earns (revenue) and what it spends. A deficit means spending is higher than revenue, while a surplus means the government brought in more than it spent. This is a key measure of fiscal health.",
+        
+        "The total amount of money the federal government pays each quarter in interest on its debt. Higher interest payments can indicate rising borrowing costs or growing debt burdens, affecting the federal budget and financial stability.",
         
         "The total market value of all goods and services produced in the U.S. without adjusting for inflation. It gives a snapshot of the size and growth of the economy but doesn't reflect changes in the purchasing power of money.",
         

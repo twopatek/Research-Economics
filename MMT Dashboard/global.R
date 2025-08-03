@@ -3,6 +3,7 @@ library(tidyverse)
 library(plotly)
 library(eFRED)
 library(shiny)
+library(htmltools)
 library(shinydashboard)
 library(shinyWidgets)
 library(scales)
@@ -16,11 +17,15 @@ set_fred_key(api_key)
 # define a list of series to load
 series_list <- list(
   yield_curve            = list(value = "T10Y2YM"),
-  interest_payments      = list(value = "A091RC1Q027SBEA"),
+  
+  # Jobs
+  payroll           = list(value = "PAYEMS"),
+  unemployment      = list(value = "UNRATE"),
   
   # Fiscal aggregates
   total_debt             = list(value = "GFDEBTN"),    # Total public debt
   federal_deficit        = list(value = "FYFSD"),      # Federal surplus/deficit
+  interest_payments      = list(value = "A091RC1Q027SBEA"), # Interets on public debt
   
   # Output
   gdp                    = list(value = "GDP"),        # Nominal GDP
@@ -40,26 +45,16 @@ series_list <- list(
   fed_assets             = list(value = "WALCL")       # Fed total assets (QE)
 )
 
-
-# # map function to generate series informationn
-# series <- ""
-# 
-# get_series_info <- function(series) {
-#   df <- fred(series, all = FALSE)
-#   print(str(df))
-#   notes <- attr(df, "info")
-# }
-# 
-# series_info <- map_dfr(series_list, ~get_series_info(.))
-
 series_meta <- tibble(
   series_id   = names(series_list),
   series_code = map_chr(series_list, "value"),
   series_name = c(
     "10Y–2Y Yield Curve",
-    "Federal Interest Payments",
+    "Nonfarm Payroll",
+    "Unemployment Rate",
     "Total Public Debt",
     "Federal Surplus/Deficit",
+    "Federal Interest Payments",
     "Nominal GDP",
     "Headline CPI",
     "Core CPI",
