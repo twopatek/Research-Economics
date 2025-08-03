@@ -1,11 +1,13 @@
 # ---- UI ----
 ui <- dashboardPage(
+  skin = "purple",
   dashboardHeader(title = "Economic Health Dashboard"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("About",    tabName = "about_tab",   icon = icon("book")),
-      menuItem("Plot", tabName = "plot_tab"),
-      menuItem("Analysis", tabName = "analysis_tab")
+      menuItem("About", tabName = "about_tab",   icon = icon("info")),
+      menuItem("Budget Watch", tabName = "budget_tab", icon = icon("dollar-sign")),
+      menuItem("Scaling Plot", tabName = "plot_tab", icon = icon("chart-line")),
+      menuItem("Analysis", tabName = "analysis_tab", icon = icon("calculator"))
     )
   ),
   dashboardBody(
@@ -17,7 +19,9 @@ ui <- dashboardPage(
             width = 12,
             box(
               title = "Welcome to the Economic Health Dashboard",
-              status = "primary", solidHeader = TRUE, width = 12,
+              status = "info", 
+              solidHeader = TRUE, 
+              width = 12,
               p("This Shiny app pulls a selection of key U.S. economic time series from FRED and lets you:"),
               htmltools::tags$ul(
                 tags$li("Compare levels or normalized changes across any combination of series."),
@@ -30,6 +34,77 @@ ui <- dashboardPage(
               p("**Data source disclaimer:**
                 This app is not affiliated with the Federal Reserve or FRED®.
                 It simply uses FRED’s public API to fetch time series data for analysis.")
+            )
+          )
+        )
+      ),
+      tabItem(
+        tabName = "budget_tab",
+        fluidRow(
+          column(
+            width = 3,
+            box(
+              width = 12,
+              title = "Budget Year",
+              solidHeader = TRUE,
+              status = "info",
+              pickerInput(
+                inputId = "budget_year",
+                label = "Budget Year:",
+                choices = budget_year_choices,
+                selected = first(budget_year_choices),
+                multiple = FALSE
+              )
+            )
+          )
+        ),
+        fluidRow(
+          column(
+            width = 12,
+            solidHeader = TRUE,
+            status = "info",
+            tabsetPanel(
+              id = "cbo_budget",
+              tabPanel(
+                title = "Sankey Flow Chart",
+                fluidRow(
+                  column(
+                    width = 12,
+                    box(
+                      width = 12,
+                      title = "Receipts",
+                      solidHeader = TRUE,
+                      status = "info",
+                      sankeyNetworkOutput("cbo_budget_receipts_sankey_plot")
+                    )
+                  ),
+                  column(
+                    width = 12,
+                    box(
+                      width = 12,
+                      title = "Outlays",
+                      solidHeader = TRUE,
+                      status = "info",
+                      sankeyNetworkOutput("cbo_budget_outlays_sankey_plot")
+                    )
+                  )
+                )
+              ),
+              tabPanel(
+                title = "Budget Data Guide",
+                fluidRow(
+                  column(
+                    width = 12,
+                    box(
+                      width = 12,
+                      title = "Guide",
+                      status = "info",
+                      solidHeader = TRUE,
+                      DTOutput("budget_guide_table", height = "600px")
+                    )
+                  )
+                )
+            )
             )
           )
         )
@@ -93,7 +168,7 @@ ui <- dashboardPage(
                       box(
                         title = "Output",
                         solidHeader = TRUE,
-                        status = "warning",
+                        status = "info",
                         width = 12,
                         plotlyOutput("plot", height = "600px")
                       )
@@ -108,7 +183,7 @@ ui <- dashboardPage(
                       box(
                         title = "Series Guide",
                         solidHeader = TRUE,
-                        status = "primary",
+                        status = "info",
                         width = 12,
                         DTOutput("series_guide_table")
                       )
@@ -128,7 +203,9 @@ ui <- dashboardPage(
           tabPanel("Lead–Lag Explorer",
                    fluidRow(
                      box(
-                       width = 4, status = "primary", solidHeader = TRUE,
+                       width = 4, 
+                       status = "info", 
+                       solidHeader = TRUE,
                        selectInput("lag_series1", "Series 1", choices = NULL),
                        selectInput("lag_series2", "Series 2", choices = NULL),
                        sliderInput("lag_max", "Max lead-lag (months)", min = 1, max = 24, value = 12),
@@ -140,7 +217,9 @@ ui <- dashboardPage(
                        )
                      ),
                      box(
-                       width = 8, status = "info", solidHeader = TRUE,
+                       width = 8, 
+                       status = "info", 
+                       solidHeader = TRUE,
                        plotlyOutput("ccf_plot", height = "300px"),
                        tableOutput("lag_table")
                      )

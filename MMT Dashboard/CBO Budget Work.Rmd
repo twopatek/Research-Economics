@@ -26,6 +26,8 @@ df_rev <- read_excel(path_to_file,
   pivot_longer(-fiscal_year,
                names_to  = "category",
                values_to = "amount") %>% 
+  filter(category != "total") %>% 
+  mutate(category = str_to_title(str_replace_all(category, "_", " "))) %>% 
   arrange(desc(fiscal_year))
 ```
 
@@ -36,10 +38,6 @@ df_out <- read_excel(path_to_file,
                      n_max = 63) %>%      
   clean_names() %>%
   rename(fiscal_year = x1)
-  # pivot_longer(-fiscal_year,
-  #              names_to  = "category",
-  #              values_to = "amount") %>% 
-  # arrange(desc(fiscal_year))
 ```
 
 ```{r Discretionary Outlays}
@@ -49,10 +47,6 @@ df_Disc_out <- read_excel(path_to_file,
                      n_max = 63) %>%      
   clean_names() %>%
   rename(fiscal_year = x1)
-  # pivot_longer(-fiscal_year,
-  #              names_to  = "category",
-  #              values_to = "amount") %>% 
-  # arrange(desc(fiscal_year))
 ```
 
 ```{r Mandatory Outlays}
@@ -63,66 +57,113 @@ df_Mand_out <- read_excel(path_to_file,
                      na    = "n.a.") %>%      
   clean_names() %>%
   rename(fiscal_year = x1)
-  # pivot_longer(-fiscal_year,
-  #              names_to  = "category",
-  #              values_to = "amount") %>% 
-  # arrange(desc(fiscal_year))
 ```
 
 ```{r Combined Outlays}
-df_out <- df_out %>% 
+df_exp <- df_out %>% 
   full_join(df_Disc_out %>% select(-total), by = "fiscal_year") %>% 
-  full_join(df_Mand_out %>% select(-offsetting_receipts, -total), by = "fiscal_year")
+  full_join(df_Mand_out %>% select(-offsetting_receipts, -total), by = "fiscal_year") %>% 
+  pivot_longer(-fiscal_year,
+               names_to  = "category",
+               values_to = "amount") %>% 
+  filter(!category %in% c("major_health_care_programs_net", "total")) %>% 
+  mutate(category = str_to_title(str_replace_all(category, "_", " "))) %>% 
+  arrange(desc(fiscal_year))
 ```
 
-```{r Sankey Test Plot}
-# 2. Define your nodes
-nodes <- data.frame(
-  name = c("Income", "Savings", "Expenses", "Investments")
+```{R Revenue Sankey}
+# 1) grab latest year
+latest_year <- max(df_rev$fiscal_year, df_exp$fiscal_year)
+rev_sub     <- df_rev %>%   filter(fiscal_year == latest_year)
+exp_sub     <- df_exp %>%   filter(fiscal_year == latest_year)
+
+# — REVENUE Sankey —
+# nodes & links for revenue breakdown
+rev_nodes <- data.frame(name = c(rev_sub$category, "Total Revenue"), stringsAsFactors = FALSE)
+rev_idx   <- function(x) match(x, rev_nodes$name) - 1
+rev_links <- rev_sub %>% transmute(
+  source = rev_idx("Total Revenue"),
+  target = rev_idx(category),
+  value  = amount
 )
 
-# 3. Define the flows (links)
-#    source/target are zero-based indices into the nodes data.frame
-links <- data.frame(
-  source = c(0,     0,     0,     1),
-  target = c(1,     2,     3,     3),
-  value  = c(5000,  3000,  2000,  1500)
+# plot revenue
+rev_sankey <- sankeyNetwork(
+  Links    = rev_links, Nodes = rev_nodes,
+  Source   = "source", Target = "target",
+  Value    = "value",  NodeID = "name",
+  fontSize = 12, nodeWidth = 30, nodePadding = 10
 )
 
-# 4. Create the Sankey diagram
-sankeyNetwork(
-  Links    = links,
-  Nodes    = nodes,
-  Source   = "source",
-  Target   = "target",
-  Value    = "value",
-  NodeID   = "name",
-  fontSize = 12,
-  nodeWidth = 30
-)
+rev_sankey
+
+# write it to disk
+saveNetwork(rev_sankey, file = "rev.sankey.html")
 ```
 
-```{r Sankey Revenue Plot}
-nodes <- df_rev %>% 
-  distinct(category)
-
-
-#    source/target are zero-based indices into the nodes data.frame
-links <- data.frame(
-  source = c(0,     0,     0,     1),
-  target = c(1,     2,     3,     3),
-  value  = c(5000,  3000,  2000,  1500)
+```{r Expense Sankey}
+# — EXPENSE Sankey —
+tier1 <- c(
+  "Discretionary",
+  "Programmatic Outlays",
+  "Offsetting Receipts",
+  "Net Interest"
+)
+tier2a <- c(
+  "Defense",
+  "Nondefense"
+)
+tier2b <- c(
+  "Social Security",
+  "Medicare",
+  "Medicaid",
+  "Income Security",
+  "Federal Civilian And Military Retirement",
+  "Veterans Programs",
+  "Other Programs"
 )
 
-# 4. Create the Sankey diagram
-sankeyNetwork(
-  Links    = links,
-  Nodes    = nodes,
-  Source   = "source",
-  Target   = "target",
-  Value    = "value",
-  NodeID   = "name",
-  fontSize = 12,
-  nodeWidth = 30
+exp_nodes <- data.frame(
+  name = c("Total Expense", tier1, tier2a, tier2b),
+  stringsAsFactors = FALSE
 )
+exp_idx <- function(x) match(x, exp_nodes$name) - 1
+
+# Tier 1 links
+exp_t1 <- exp_sub %>% filter(category %in% tier1) %>%
+  transmute(
+    source = exp_idx("Total Expense"),
+    target = exp_idx(category),
+    value  = amount
+  )
+
+# Tier 2 links
+exp_t2a <- exp_sub %>% filter(category %in% tier2a) %>%
+  transmute(
+    source = exp_idx("Discretionary"),
+    target = exp_idx(category),
+    value  = amount
+  )
+exp_t2b <- exp_sub %>% filter(category %in% tier2b) %>%
+  transmute(
+    source = exp_idx("Programmatic Outlays"),
+    target = exp_idx(category),
+    value  = amount
+  )
+
+exp_links <- bind_rows(exp_t1, exp_t2a, exp_t2b)
+
+# plot expense
+exp_sankey <- sankeyNetwork(
+  Links    = exp_links, Nodes = exp_nodes,
+  Source   = "source", Target = "target",
+  Value    = "value",  NodeID = "name",
+  fontSize = 12, nodeWidth = 30, nodePadding = 10
+)
+
+exp_sankey
+
+# write it to disk
+saveNetwork(exp_sankey, file = "exp_sankey.html")
 ```
+

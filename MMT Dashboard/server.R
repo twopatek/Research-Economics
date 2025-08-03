@@ -1,5 +1,6 @@
 # ---- SERVER ----
 server <- function(input, output, session) {
+  
   # populate the series selector once df is ready
   observe({
     updatePickerInput(
@@ -10,7 +11,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # 2) reactive that returns min/max dates for the currently‐selected series
+  # reactive that returns min/max dates for the currently‐selected series
   sel_span <- reactive({
     req(input$series_name)
     sel <- df %>% filter(series_name %in% input$series_name)
@@ -20,7 +21,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # 3) whenever series change, reset the date_range to full span of those series
+  # whenever series change, reset the date_range to full span of those series
   observeEvent(sel_span(), {
     updateDateRangeInput(
       session,
@@ -30,7 +31,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # 4) quick‐select observers using sel_span()
+  # quick‐select observers using sel_span()
   observeEvent(input$btn_6m, {
     end   <- sel_span()$max
     start <- end %m-% months(6)
@@ -62,7 +63,7 @@ server <- function(input, output, session) {
     updateDateRangeInput(session, "date_range", start = start, end = end)
   })
   
-  # 5) reset button also uses sel_span()
+  # reset button also uses sel_span()
   observeEvent(input$btn_reset, {
     updateDateRangeInput(
       session,
@@ -71,7 +72,6 @@ server <- function(input, output, session) {
       end   = sel_span()$max
     )
   })
-  
   
   # filter by series AND date-range
   filtered_data <- reactive({
@@ -258,7 +258,7 @@ server <- function(input, output, session) {
       )
 
   })
-  
+
   
   # populate the two series selectors
   observe({
@@ -309,4 +309,121 @@ server <- function(input, output, session) {
     d
   }, digits = 3)
   
+
+    # reactive for the selected year
+    selected_year <- reactive({
+      req(input$budget_year)
+      input$budget_year
+    })
+
+  # reactive subset for receipts
+  receipts_subset <- reactive({
+    df_cbo_budget_receipts %>%
+      filter(fiscal_year == selected_year())
+  })
+
+  # reactive subset for outlays
+  outlays_subset <- reactive({
+    df_cbo_budget_outlays %>%
+      filter(fiscal_year == selected_year())
+  })
+
+  output$cbo_budget_receipts_sankey_plot <- renderSankeyNetwork({
+    # nodes & links for revenue breakdown
+    rev_nodes <- data.frame(name = c(receipts_subset()$category, "Total Revenue"), stringsAsFactors = FALSE)
+    rev_idx   <- function(x) match(x, rev_nodes$name) - 1
+    rev_links <- receipts_subset() %>% transmute(
+      source = rev_idx("Total Revenue"),
+      target = rev_idx(category),
+      value  = amount
+    )
+
+    # plot revenue
+    rev_sankey <- sankeyNetwork(
+      Links    = rev_links, Nodes = rev_nodes,
+      Source   = "source", Target = "target",
+      Value    = "value",  NodeID = "name",
+      fontSize = 12, nodeWidth = 30, nodePadding = 10
+    )
+
+    rev_sankey
+  })
+
+  output$cbo_budget_outlays_sankey_plot <- renderSankeyNetwork({
+    # — EXPENSE Sankey —
+    tier1 <- c(
+      "Discretionary",
+      "Programmatic Outlays",
+      "Offsetting Receipts",
+      "Net Interest"
+    )
+    tier2a <- c(
+      "Defense",
+      "Nondefense"
+    )
+    tier2b <- c(
+      "Social Security",
+      "Medicare",
+      "Medicaid",
+      "Income Security",
+      "Federal Civilian And Military Retirement",
+      "Veterans Programs",
+      "Other Programs"
+    )
+
+    exp_nodes <- data.frame(
+      name = c("Total Expense", tier1, tier2a, tier2b),
+      stringsAsFactors = FALSE
+    )
+    exp_idx <- function(x) match(x, exp_nodes$name) - 1
+
+    # Tier 1 links
+    exp_t1 <- outlays_subset() %>% filter(category %in% tier1) %>%
+      transmute(
+        source = exp_idx("Total Expense"),
+        target = exp_idx(category),
+        value  = amount
+      )
+
+    # Tier 2 links
+    exp_t2a <- outlays_subset() %>% filter(category %in% tier2a) %>%
+      transmute(
+        source = exp_idx("Discretionary"),
+        target = exp_idx(category),
+        value  = amount
+      )
+    exp_t2b <- outlays_subset() %>% filter(category %in% tier2b) %>%
+      transmute(
+        source = exp_idx("Programmatic Outlays"),
+        target = exp_idx(category),
+        value  = amount
+      )
+
+    exp_links <- bind_rows(exp_t1, exp_t2a, exp_t2b)
+
+    # plot expense
+    exp_sankey <- sankeyNetwork(
+      Links    = exp_links, Nodes = exp_nodes,
+      Source   = "source", Target = "target",
+      Value    = "value",  NodeID = "name",
+      fontSize = 12, nodeWidth = 30, nodePadding = 10
+    )
+
+    exp_sankey
+  })
+  
+  output$budget_guide_table <- renderDT({
+    datatable(
+      budget_guide,
+      rownames = FALSE,
+      options = list(
+        paging         = FALSE,
+        autoWidth      = TRUE,
+        scrollX        = TRUE,
+        scrollY        = "600px",
+        scrollCollapse = TRUE,   
+        dom = 't'
+      )
+    )
+  })
 }
