@@ -1,0 +1,217 @@
+---
+title: "CBO Projections"
+author: "Matthew Adams"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(tidyverse)
+library(janitor)
+library(networkD3)
+
+path_to_file <- "51118-2025-01-Budget-Projections.xlsx"
+```
+
+```{r Receipts}
+df_cbo_projections_receipts <- read_excel(path_to_file,
+                             sheet = "Table B-1",
+                             skip  = 7,
+                             n_max = 22) %>% 
+  rename(Category = `...1`) %>% 
+  select(-14, -15) %>% 
+  filter(Category %in% c(
+    "Individual income taxes",
+    "Payroll taxes",
+    "Corporate income taxes",
+    "Other"
+  )) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+```
+
+```{r Mandatory Outlays}
+df_cbo_projections_mandatory_outlays <- read_excel(path_to_file,
+                             sheet = "Table B-4",
+                             skip  = 8,
+                             n_max = 72) %>% 
+  rename(Category = `...1`) %>% 
+  select(-14, -15) %>% 
+  slice(4, 6, 7, 18, 22, 27, 37, 50)
+
+new_names <- c("Social Security", "Medicare", "Medicaid",
+               "Income Security", "Federal Civilian and Military Retirement",
+               "Veterans Programs", "Other Programs", "Offsetting Receipts")
+
+df_cbo_projections_mandatory_outlays <- df_cbo_projections_mandatory_outlays %>%
+  mutate(Category = replace(Category, row_number() %in% 1:8, new_names)) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+```
+
+```{r Baseline Outlays}
+df_cbo_projections_baseline_outlays <- read_excel(path_to_file,
+                             sheet = "Table B-2",
+                             skip  = 6,
+                             n_max = 6) %>% 
+  rename(Category = `...1`) %>%
+  slice(4:6) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+```
+
+```{r Join Outlays}
+mandatory_wide <- df_cbo_projections_mandatory_outlays %>% 
+  pivot_wider(names_from = "Category", values_from = "Amount")
+
+baseline_wide <- df_cbo_projections_baseline_outlays %>% 
+  pivot_wider(names_from = "Category", values_from = "Amount")
+
+df_cbo_projections_joined_outlays <- mandatory_wide %>% 
+  full_join(baseline_wide, by = "Year") %>% 
+  select(-Mandatory) %>% 
+  pivot_longer(-Year, names_to = "Category", values_to = "Amount")
+
+```
+
+```{R Revenue Sankey}
+latest_year <- max(df_cbo_projections_receipts$Year, na.rm = TRUE)
+receipts_sub <- df_cbo_projections_receipts %>%
+  filter(Year == latest_year)
+
+# Step 2: Create nodes
+receipts_nodes <- data.frame(
+  name = c("Total Revenue", unique(receipts_sub$Category)),
+  stringsAsFactors = FALSE
+)
+
+# Step 3: Function to get node index
+receipts_idx <- function(x) match(x, receipts_nodes$name) - 1
+
+# Step 4: Create links (from Total Revenue to each category)
+receipts_links <- receipts_sub %>%
+  transmute(
+    source = receipts_idx("Total Revenue"),
+    target = receipts_idx(Category),
+    value  = Amount
+  )
+
+# Step 5: Create Sankey
+rev_sankey <- sankeyNetwork(
+  Links    = receipts_links,
+  Nodes    = receipts_nodes,
+  Source   = "source",
+  Target   = "target",
+  Value    = "value",
+  NodeID   = "name",
+  fontSize = 12,
+  nodeWidth = 30,
+  nodePadding = 10
+)
+
+# write it to disk
+saveNetwork(rev_sankey, file = "rev.sankey.html")
+```
+
+```{r }
+# Filter latest year
+latest_year <- min(df_cbo_projections_joined_outlays$Year, na.rm = TRUE)
+exp_sub <- df_cbo_projections_joined_outlays %>%
+  filter(Year == latest_year)
+
+# Define tiers
+tier1 <- c("Discretionary", "Programmatic Outlays", "Offsetting Receipts", "Net interest")
+tier2b <- c(
+  "Social Security", "Medicare", "Medicaid", "Income Security",
+  "Federal Civilian and Military Retirement", "Veterans Programs", "Other Programs"
+)
+
+# Create node list
+exp_nodes <- data.frame(
+  name = c("Total Expense", tier1, tier2b),
+  stringsAsFactors = FALSE
+)
+
+exp_idx <- function(x) match(x, exp_nodes$name) - 1
+
+# Tier 1 links: direct from Total Expense
+exp_t1 <- exp_sub %>%
+  filter(Category %in% c("Discretionary", "Offsetting Receipts", "Net interest")) %>%
+  transmute(
+    source = exp_idx("Total Expense"),
+    target = exp_idx(Category),
+    value  = Amount
+  )
+
+# Add Programmatic Outlays total
+programmatic_total <- exp_sub %>%
+  filter(Category %in% tier2b) %>%
+  summarise(value = sum(Amount, na.rm = TRUE)) %>%
+  mutate(
+    source = exp_idx("Total Expense"),
+    target = exp_idx("Programmatic Outlays")
+  )
+
+# Tier 2b links: detailed categories from Programmatic Outlays
+exp_t2b <- exp_sub %>%
+  filter(Category %in% tier2b) %>%
+  transmute(
+    source = exp_idx("Programmatic Outlays"),
+    target = exp_idx(Category),
+    value  = Amount
+  )
+
+# Combine all links
+exp_links <- bind_rows(exp_t1, programmatic_total, exp_t2b)
+
+# Create Sankey
+exp_sankey <- sankeyNetwork(
+  Links    = exp_links,
+  Nodes    = exp_nodes,
+  Source   = "source",
+  Target   = "target",
+  Value    = "value",
+  NodeID   = "name",
+  fontSize = 12,
+  nodeWidth = 30,
+  nodePadding = 10
+)
+
+# View it
+exp_sankey
+
+# Save to file
+saveNetwork(exp_sankey, file = "exp.sankey.html")
+
+```
+

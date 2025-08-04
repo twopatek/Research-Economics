@@ -97,10 +97,14 @@ df <- series_meta %>%
 df <- df %>% 
   filter(!is.na(series))
 
-# CBP Budget Data
-path_to_file <- "51134-2025-01-Historical-Budget-Data.xlsx"
 
-df_cbo_budget_receipts <- read_excel(path_to_file,
+
+
+
+# CBP Budget Data
+path_to_file1 <- "51134-2025-01-Historical-Budget-Data.xlsx"
+
+df_cbo_budget_receipts <- read_excel(path_to_file1,
                      sheet = "2. Revenues",
                      skip  = 7,
                      n_max = 63) %>%        
@@ -113,21 +117,21 @@ df_cbo_budget_receipts <- read_excel(path_to_file,
   mutate(category = str_to_title(str_replace_all(category, "_", " "))) %>% 
   arrange(desc(fiscal_year))
 
-df_cbo_budget_outlays <- read_excel(path_to_file,
+df_cbo_budget_outlays <- read_excel(path_to_file1,
                      sheet = "3. Outlays",
                      skip  = 8,
                      n_max = 63) %>%      
   clean_names() %>%
   rename(fiscal_year = x1)
 
-df_cbo_budget_discretionary_outlays <- read_excel(path_to_file,
+df_cbo_budget_discretionary_outlays <- read_excel(path_to_file1,
                           sheet = "4. Discretionary Outlays",
                           skip  = 7,
                           n_max = 63) %>%      
   clean_names() %>%
   rename(fiscal_year = x1)
 
-df_cbo_budget_mandatory_outlays <- read_excel(path_to_file,
+df_cbo_budget_mandatory_outlays <- read_excel(path_to_file1,
                           sheet = "5. Mandatory Outlays",
                           skip  = 7,
                           n_max = 63,
@@ -146,8 +150,94 @@ df_cbo_budget_outlays <- df_cbo_budget_outlays %>%
   arrange(desc(fiscal_year))
 
 # Choices
-budget_year_choices <- unique(df_cbo_budget_receipts$fiscal_year)
+historical_budget_year_choices <- unique(df_cbo_budget_receipts$fiscal_year)
 
+
+
+path_to_file2 <- "51118-2025-01-Budget-Projections.xlsx"
+
+df_cbo_projections_receipts <- read_excel(path_to_file2,
+                                          sheet = "Table B-1",
+                                          skip  = 7,
+                                          n_max = 22) %>% 
+  rename(Category = `...1`) %>% 
+  select(-14, -15) %>% 
+  filter(Category %in% c(
+    "Individual income taxes",
+    "Payroll taxes",
+    "Corporate income taxes",
+    "Other"
+  )) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+
+
+df_cbo_projections_mandatory_outlays <- read_excel(path_to_file2,
+                                                   sheet = "Table B-4",
+                                                   skip  = 8,
+                                                   n_max = 72) %>% 
+  rename(Category = `...1`) %>% 
+  select(-14, -15) %>% 
+  slice(4, 6, 7, 18, 22, 27, 37, 50)
+
+new_names <- c("Social Security", "Medicare", "Medicaid",
+               "Income Security", "Federal Civilian and Military Retirement",
+               "Veterans Programs", "Other Programs", "Offsetting Receipts")
+
+df_cbo_projections_mandatory_outlays <- df_cbo_projections_mandatory_outlays %>%
+  mutate(Category = replace(Category, row_number() %in% 1:8, new_names)) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+
+
+df_cbo_projections_baseline_outlays <- read_excel(path_to_file2,
+                                                  sheet = "Table B-2",
+                                                  skip  = 6,
+                                                  n_max = 6) %>% 
+  rename(Category = `...1`) %>%
+  slice(4:6) %>% 
+  mutate(across(
+    .cols = -Category,
+    .fns = ~ as.numeric(gsub(",", "", .x))
+  )) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  pivot_longer(
+    cols = -Category,
+    names_to = "Year",
+    values_to = "Amount"
+  ) %>%
+  mutate(Year = as.integer(gsub("[^0-9]", "", Year)))
+
+mandatory_wide <- df_cbo_projections_mandatory_outlays %>% 
+  pivot_wider(names_from = "Category", values_from = "Amount")
+
+baseline_wide <- df_cbo_projections_baseline_outlays %>% 
+  pivot_wider(names_from = "Category", values_from = "Amount")
+
+df_cbo_projections_joined_outlays <- mandatory_wide %>% 
+  full_join(baseline_wide, by = "Year") %>% 
+  select(-Mandatory) %>% 
+  pivot_longer(-Year, names_to = "Category", values_to = "Amount")
+
+projection_budget_year_choices <- unique(df_cbo_projections_receipts$Year)
 
 budget_guide <- tibble(
   Category = c(

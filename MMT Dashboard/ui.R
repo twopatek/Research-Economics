@@ -51,31 +51,33 @@ ui <- dashboardPage(
         tabName = "budget_tab",
         fluidRow(
           column(
-            width = 3,
-            box(
-              width = 12,
-              title = "Budget Year",
-              solidHeader = TRUE,
-              status = "info",
-              pickerInput(
-                inputId = "budget_year",
-                label = "Budget Year:",
-                choices = budget_year_choices,
-                selected = first(budget_year_choices),
-                multiple = FALSE
-              )
-            )
-          )
-        ),
-        fluidRow(
-          column(
             width = 12,
             solidHeader = TRUE,
             status = "info",
             tabsetPanel(
               id = "cbo_budget",
+              
+              # --- Historical Budget Subtab ---
               tabPanel(
-                title = "Sankey Flow Chart",
+                title = "Historical",
+                fluidRow(
+                  column(
+                    width = 3,
+                    box(
+                      width = 12,
+                      title = "Select Year",
+                      solidHeader = TRUE,
+                      status = "info",
+                      pickerInput(
+                        inputId = "historical_budget_year",
+                        label = "Budget Year:",
+                        choices = historical_budget_year_choices,
+                        selected = first(historical_budget_year_choices),
+                        multiple = FALSE
+                      )
+                    )
+                  )
+                ),
                 fluidRow(
                   column(
                     width = 12,
@@ -84,7 +86,7 @@ ui <- dashboardPage(
                       title = "Receipts",
                       solidHeader = TRUE,
                       status = "info",
-                      sankeyNetworkOutput("cbo_budget_receipts_sankey_plot")
+                      sankeyNetworkOutput("historical_receipts_sankey_plot")
                     )
                   ),
                   column(
@@ -94,11 +96,58 @@ ui <- dashboardPage(
                       title = "Outlays",
                       solidHeader = TRUE,
                       status = "info",
-                      sankeyNetworkOutput("cbo_budget_outlays_sankey_plot")
+                      sankeyNetworkOutput("historical_outlays_sankey_plot")
                     )
                   )
                 )
               ),
+              
+              # --- Projections Budget Subtab ---
+              tabPanel(
+                title = "Projections",
+                fluidRow(
+                  column(
+                    width = 3,
+                    box(
+                      width = 12,
+                      title = "Select Year",
+                      solidHeader = TRUE,
+                      status = "info",
+                      pickerInput(
+                        inputId = "projection_budget_year",
+                        label = "Projection Year:",
+                        choices = projection_budget_year_choices,
+                        selected = first(projection_budget_year_choices),
+                        multiple = FALSE
+                      )
+                    )
+                  )
+                ),
+                fluidRow(
+                  column(
+                    width = 12,
+                    box(
+                      width = 12,
+                      title = "Receipts",
+                      solidHeader = TRUE,
+                      status = "info",
+                      sankeyNetworkOutput("projection_receipts_sankey_plot")
+                    )
+                  ),
+                  column(
+                    width = 12,
+                    box(
+                      width = 12,
+                      title = "Outlays",
+                      solidHeader = TRUE,
+                      status = "info",
+                      sankeyNetworkOutput("projection_outlays_sankey_plot")
+                    )
+                  )
+                )
+              ),
+              
+              # --- Budget Guide Subtab ---
               tabPanel(
                 title = "Budget Data Guide",
                 fluidRow(
@@ -107,13 +156,13 @@ ui <- dashboardPage(
                     box(
                       width = 12,
                       title = "Guide",
-                      status = "info",
                       solidHeader = TRUE,
-                      DTOutput("budget_guide_table", height = "600px")
+                      status = "info",
+                      DTOutput("budget_guide_table")
                     )
                   )
                 )
-            )
+              )
             )
           )
         )

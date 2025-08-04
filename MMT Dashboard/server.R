@@ -310,25 +310,31 @@ server <- function(input, output, session) {
   }, digits = 3)
   
 
+  
+  
+  
+  
+  
+  
     # reactive for the selected year
-    selected_year <- reactive({
-      req(input$budget_year)
-      input$budget_year
+  historical_selected_year <- reactive({
+    req(input$historical_budget_year)
+    input$historical_budget_year
     })
 
   # reactive subset for receipts
   receipts_subset <- reactive({
     df_cbo_budget_receipts %>%
-      filter(fiscal_year == selected_year())
+      filter(fiscal_year == historical_selected_year())
   })
 
   # reactive subset for outlays
   outlays_subset <- reactive({
     df_cbo_budget_outlays %>%
-      filter(fiscal_year == selected_year())
+      filter(fiscal_year == historical_selected_year())
   })
 
-  output$cbo_budget_receipts_sankey_plot <- renderSankeyNetwork({
+  output$historical_receipts_sankey_plot <- renderSankeyNetwork({
     # nodes & links for revenue breakdown
     rev_nodes <- data.frame(name = c(receipts_subset()$category, "Total Revenue"), stringsAsFactors = FALSE)
     rev_idx   <- function(x) match(x, rev_nodes$name) - 1
@@ -349,7 +355,7 @@ server <- function(input, output, session) {
     rev_sankey
   })
 
-  output$cbo_budget_outlays_sankey_plot <- renderSankeyNetwork({
+  output$historical_outlays_sankey_plot <- renderSankeyNetwork({
     # — EXPENSE Sankey —
     tier1 <- c(
       "Discretionary",
@@ -418,12 +424,126 @@ server <- function(input, output, session) {
       rownames = FALSE,
       options = list(
         paging         = FALSE,
-        autoWidth      = TRUE,
         scrollX        = TRUE,
-        scrollY        = "600px",
-        scrollCollapse = TRUE,   
-        dom = 't'
-      )
+        autoWidth      = TRUE,
+        dom            = 't'  # keep minimal layout
+      ),
+      class = "stripe hover nowrap"
     )
   })
+  
+  
+  # reactive for the selected year
+  projected_selected_year <- reactive({
+    req(input$projection_budget_year)
+    input$projection_budget_year
+  })
+  
+  output$projection_receipts_sankey_plot <- renderSankeyNetwork({
+  
+    receipts_sub <- df_cbo_projections_receipts %>%
+      filter(Year == projected_selected_year())
+    
+    # Step 2: Create nodes
+    receipts_nodes <- data.frame(
+      name = c("Total Revenue", unique(receipts_sub$Category)),
+      stringsAsFactors = FALSE
+    )
+    
+    # Step 3: Function to get node index
+    receipts_idx <- function(x) match(x, receipts_nodes$name) - 1
+    
+    # Step 4: Create links (from Total Revenue to each category)
+    receipts_links <- receipts_sub %>%
+      transmute(
+        source = receipts_idx("Total Revenue"),
+        target = receipts_idx(Category),
+        value  = Amount
+      )
+    
+    # Step 5: Create Sankey
+    rev_sankey <- sankeyNetwork(
+      Links    = receipts_links,
+      Nodes    = receipts_nodes,
+      Source   = "source",
+      Target   = "target",
+      Value    = "value",
+      NodeID   = "name",
+      fontSize = 12,
+      nodeWidth = 30,
+      nodePadding = 10
+    )
+    
+    rev_sankey
+
+  })
+  
+  output$projection_outlays_sankey_plot <- renderSankeyNetwork({
+    
+    exp_sub <- df_cbo_projections_joined_outlays %>%
+      filter(Year == projected_selected_year())
+    
+    # Define tiers
+    tier1 <- c("Discretionary", "Programmatic Outlays", "Offsetting Receipts", "Net interest")
+    tier2b <- c(
+      "Social Security", "Medicare", "Medicaid", "Income Security",
+      "Federal Civilian and Military Retirement", "Veterans Programs", "Other Programs"
+    )
+    
+    # Create node list
+    exp_nodes <- data.frame(
+      name = c("Total Expense", tier1, tier2b),
+      stringsAsFactors = FALSE
+    )
+    
+    exp_idx <- function(x) match(x, exp_nodes$name) - 1
+    
+    # Tier 1 links: direct from Total Expense
+    exp_t1 <- exp_sub %>%
+      filter(Category %in% c("Discretionary", "Offsetting Receipts", "Net interest")) %>%
+      transmute(
+        source = exp_idx("Total Expense"),
+        target = exp_idx(Category),
+        value  = Amount
+      )
+    
+    # Add Programmatic Outlays total
+    programmatic_total <- exp_sub %>%
+      filter(Category %in% tier2b) %>%
+      summarise(value = sum(Amount, na.rm = TRUE)) %>%
+      mutate(
+        source = exp_idx("Total Expense"),
+        target = exp_idx("Programmatic Outlays")
+      )
+    
+    # Tier 2b links: detailed categories from Programmatic Outlays
+    exp_t2b <- exp_sub %>%
+      filter(Category %in% tier2b) %>%
+      transmute(
+        source = exp_idx("Programmatic Outlays"),
+        target = exp_idx(Category),
+        value  = Amount
+      )
+    
+    # Combine all links
+    exp_links <- bind_rows(exp_t1, programmatic_total, exp_t2b)
+    
+    # Create Sankey
+    exp_sankey <- sankeyNetwork(
+      Links    = exp_links,
+      Nodes    = exp_nodes,
+      Source   = "source",
+      Target   = "target",
+      Value    = "value",
+      NodeID   = "name",
+      fontSize = 12,
+      nodeWidth = 30,
+      nodePadding = 10
+    )
+    
+    # View it
+    exp_sankey
+  
+  })
+  
 }
