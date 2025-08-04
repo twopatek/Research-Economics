@@ -18,22 +18,31 @@ ui <- dashboardPage(
           column(
             width = 12,
             box(
-              title = "Welcome to the Economic Health Dashboard",
+              title = "About This Research",
               status = "info", 
               solidHeader = TRUE, 
               width = 12,
-              p("This Shiny app pulls a selection of key U.S. economic time series from FRED and lets you:"),
+              p("This application is an ongoing research project built in R using the Shiny framework to publish interactive software.  
+                It brings together macroeconomics and statistics to explore the implications of Modern Monetary Theory (MMT) in our financial system."),
+              
+              p(strong("Key Data Series:")),
               htmltools::tags$ul(
-                tags$li("Compare levels or normalized changes across any combination of series."),
-                tags$li("Zoom in on arbitrary date ranges or use one-click quick-select buttons (1 mo, 3 mo, etc.)."),
-                tags$li("Explore lead–lag relationships between any two series (e.g. does X lead Y?).")
+                tags$li("Federal Receipts & Outlays (Sankey diagrams illustrating cash flows)"),
+                tags$li("M2 Money Stock & Real M2 (measuring private liquidity)"),
+                tags$li("Treasury Yield Curve (10-year minus 2-year spreads)"),
+                tags$li("Inflation Metrics (CPI, Core CPI, PCE, Core PCE)"),
+                tags$li("Labor Market Indicators (Nonfarm Payrolls, Unemployment Rate)")
               ),
-              p("**Why this app?**
-                I built it to give a lightweight, interactive way to track and compare
-                important fiscal, monetary, and labor indicators without installing R or sifting through FRED’s website."),
-              p("**Data source disclaimer:**
-                This app is not affiliated with the Federal Reserve or FRED®.
-                It simply uses FRED’s public API to fetch time series data for analysis.")
+              
+              p(strong("App Features:")),
+              htmltools::tags$ul(
+                tags$li("Interactive time-series charts with normalization and percent-change overlays"),
+                tags$li("Dynamic date-range selection with quick-select buttons (6 mo, 1 yr, 5 yr, etc.)"),
+                tags$li("Lead–lag correlation explorer to test directional relationships between any two series"),
+                tags$li("Searchable series guide with definitions and metadata")
+              ),
+              
+              p("Use this tool to deepen your understanding of how government finance operations interact with monetary aggregates and real-world economic indicators under an MMT framework.")
             )
           )
         )
@@ -239,8 +248,9 @@ ui <- dashboardPage(
       )
     ),
     htmltools::tags$footer(
-      HTML("Data sourced from <a href='https://fred.stlouisfed.org/' target='_blank'>FRED</a>.
-           This application is independent and not endorsed by the Federal Reserve."),
+      HTML("Data sourced from <a href='https://fred.stlouisfed.org/' target='_blank'>FRED</a> 
+      and <a href='https://www.cbo.gov/data/budget-economic-data/' target='_blank'>CBO</a>.
+           This application is independent and not endorsed by the Federal Reserve or Congressional Budget Office."),
       style = "
         position:fixed; bottom:0; width:100%; padding:10px;
         background: #f8f9fa; text-align:center; font-size:80%;"

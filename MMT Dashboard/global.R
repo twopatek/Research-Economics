@@ -207,6 +207,10 @@ budget_guide <- tibble(
   )
 )
 
+preselected_series_names <- c(
+  "Federal Interest Payments",
+  "Effective Fed Funds Rate"
+  )
 
 
 

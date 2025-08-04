@@ -7,7 +7,7 @@ server <- function(input, output, session) {
       session, 
       "series_name", 
       choices  = sort(unique(df$series_name)),
-      selected = unique(df$series_name)[1]
+      selected = preselected_series_names
     )
   })
   
