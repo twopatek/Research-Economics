@@ -1,17 +1,35 @@
-# ---- UI ----
+# ===============================================================
+# UI: Economic Health Dashboard
+# ===============================================================
 ui <- dashboardPage(
   skin = "purple",
+  
+  # ----------------------------
+  # Dashboard Header
+  # ----------------------------
   dashboardHeader(title = "Economic Health Dashboard"),
+  
+  # ----------------------------
+  # Dashboard Sidebar
+  # ----------------------------
   dashboardSidebar(
     sidebarMenu(
-      menuItem("About", tabName = "about_tab",   icon = icon("info")),
-      menuItem("Budget Watch", tabName = "budget_tab", icon = icon("dollar-sign")),
-      menuItem("Scaling Plot", tabName = "plot_tab", icon = icon("chart-line")),
-      menuItem("Analysis", tabName = "analysis_tab", icon = icon("calculator"))
+      menuItem("About",        tabName = "about_tab",   icon = icon("info")),
+      menuItem("Budget Watch", tabName = "budget_tab",  icon = icon("dollar-sign")),
+      menuItem("Scaling Plot", tabName = "plot_tab",    icon = icon("chart-line")),
+      menuItem("Analysis",     tabName = "analysis_tab", icon = icon("calculator"))
     )
   ),
+  
+  # ----------------------------
+  # Dashboard Body
+  # ----------------------------
   dashboardBody(
     tabItems(
+      
+      # ==========================================================
+      # About Tab
+      # ==========================================================
       tabItem(
         tabName = "about_tab",
         fluidRow(
@@ -22,11 +40,12 @@ ui <- dashboardPage(
               status = "info", 
               solidHeader = TRUE, 
               width = 12,
+              
               p("This application is an ongoing research project built in R using the Shiny framework to publish interactive software.  
                 It brings together macroeconomics and statistics to explore the implications of Modern Monetary Theory (MMT) in our financial system."),
               
               p(strong("Key Data Series:")),
-              htmltools::tags$ul(
+              tags$ul(
                 tags$li("Federal Receipts & Outlays (Sankey diagrams illustrating cash flows)"),
                 tags$li("M2 Money Stock & Real M2 (measuring private liquidity)"),
                 tags$li("Treasury Yield Curve (10-year minus 2-year spreads)"),
@@ -35,7 +54,7 @@ ui <- dashboardPage(
               ),
               
               p(strong("App Features:")),
-              htmltools::tags$ul(
+              tags$ul(
                 tags$li("Interactive time-series charts with normalization and percent-change overlays"),
                 tags$li("Dynamic date-range selection with quick-select buttons (6 mo, 1 yr, 5 yr, etc.)"),
                 tags$li("Lead–lag correlation explorer to test directional relationships between any two series"),
@@ -47,6 +66,10 @@ ui <- dashboardPage(
           )
         )
       ),
+      
+      # ==========================================================
+      # Budget Watch Tab
+      # ==========================================================
       tabItem(
         tabName = "budget_tab",
         fluidRow(
@@ -57,7 +80,9 @@ ui <- dashboardPage(
             tabsetPanel(
               id = "cbo_budget",
               
-              # --- Historical Budget Subtab ---
+              # ----------------------------
+              # Historical Budget Subtab
+              # ----------------------------
               tabPanel(
                 title = "Historical",
                 fluidRow(
@@ -102,7 +127,9 @@ ui <- dashboardPage(
                 )
               ),
               
-              # --- Projections Budget Subtab ---
+              # ----------------------------
+              # Projections Budget Subtab
+              # ----------------------------
               tabPanel(
                 title = "Projections",
                 fluidRow(
@@ -147,7 +174,9 @@ ui <- dashboardPage(
                 )
               ),
               
-              # --- Budget Guide Subtab ---
+              # ----------------------------
+              # Budget Data Guide Subtab
+              # ----------------------------
               tabPanel(
                 title = "Budget Data Guide",
                 fluidRow(
@@ -167,6 +196,10 @@ ui <- dashboardPage(
           )
         )
       ),
+      
+      # ==========================================================
+      # Scaling Plot Tab
+      # ==========================================================
       tabItem(
         tabName = "plot_tab",
         fluidRow(
@@ -176,6 +209,10 @@ ui <- dashboardPage(
               width = 12,
               tabsetPanel(
                 id = "plot_subtabs",
+                
+                # ----------------------------
+                # Plot Viewer Subtab
+                # ----------------------------
                 tabPanel(
                   title = "Plot",
                   fluidRow(
@@ -186,7 +223,8 @@ ui <- dashboardPage(
                         solidHeader = TRUE,
                         status = "info",
                         width = 12,
-                        # existing pickerInput
+                        
+                        # Series picker
                         pickerInput(
                           inputId = "series_name",
                           label = "Select series:",
@@ -198,15 +236,17 @@ ui <- dashboardPage(
                             `selected-text-format` = "count > 3"
                           )
                         ),
-                        # new date range input
+                        
+                        # Date range selector
                         dateRangeInput(
                           inputId = "date_range",
                           label = "Select date range:",
-                          start  = NULL,  # will set in server
+                          start  = NULL,
                           end    = NULL,
                           format = "yyyy-mm-dd"
                         ),
-                        # quick-select buttons
+                        
+                        # Quick range buttons
                         fluidRow(
                           column(6, actionButton("btn_6m",    "6 mo")),
                           column(6, actionButton("btn_1y",    "1 yr")),
@@ -216,6 +256,7 @@ ui <- dashboardPage(
                           column(6, actionButton("btn_30y",   "30 yr")),
                           column(6, actionButton("btn_reset", "Reset Date Range"))
                         ),
+                        
                         p("Hover over the lines for analytics."),
                         p("*Shaded areas = GDP recessions"),
                         p("Data source: FRED")
@@ -233,6 +274,10 @@ ui <- dashboardPage(
                     )
                   )
                 ),
+                
+                # ----------------------------
+                # Series Guide Subtab
+                # ----------------------------
                 tabPanel(
                   title = "Guide",
                   fluidRow(
@@ -253,11 +298,17 @@ ui <- dashboardPage(
           )
         )
       ),
+      
+      # ==========================================================
+      # Analysis Tab
+      # ==========================================================
       tabItem(
         tabName = "analysis_tab",
-        # three side-by-side panels for each analysis
         tabsetPanel(
-          ### 1) Lead–Lag Explorer ###
+          
+          # ----------------------------
+          # Lead–Lag Explorer
+          # ----------------------------
           tabPanel("Lead–Lag Explorer",
                    fluidRow(
                      box(
@@ -283,22 +334,30 @@ ui <- dashboardPage(
                      )
                    )
           ),
-
-          ### 2) Recession Impact (placeholder) ###
+          
+          # ----------------------------
+          # Recession Impact (placeholder)
+          # ----------------------------
           tabPanel("Recession Impact",
                    h4("Coming soon…")
           ),
-
-          ### 3) Volatility & Alerts (placeholder) ###
+          
+          # ----------------------------
+          # Volatility & Alerts (placeholder)
+          # ----------------------------
           tabPanel("Volatility & Alerts",
                    h4("Coming soon…")
           )
         )
       )
     ),
+    
+    # ==========================================================
+    # Global Footer
+    # ==========================================================
     htmltools::tags$footer(
       HTML("Data sourced from <a href='https://fred.stlouisfed.org/' target='_blank'>FRED</a> 
-      and <a href='https://www.cbo.gov/data/budget-economic-data/' target='_blank'>CBO</a>.
+            and <a href='https://www.cbo.gov/data/budget-economic-data/' target='_blank'>CBO</a>.
            This application is independent and not endorsed by the Federal Reserve or Congressional Budget Office."),
       style = "
         position:fixed; bottom:0; width:100%; padding:10px;

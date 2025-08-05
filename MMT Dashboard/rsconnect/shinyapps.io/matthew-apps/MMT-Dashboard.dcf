@@ -5,9 +5,9 @@ account: matthew-apps
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15143866
-bundleId: 10721615
+bundleId: 10726828
 url: https://matthew-apps.shinyapps.io/MMT-Dashboard/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|CBO Budget Work.Rmd|exp_sankey.html|MMT Dashboard.R|Recession Risk.Rmd|rev.sankey.html|Sankey Testing.R
+ignoredFiles: .RData|CBO Budget Work.Rmd|CBO Projections Work.Rmd|Recession Risk.Rmd
