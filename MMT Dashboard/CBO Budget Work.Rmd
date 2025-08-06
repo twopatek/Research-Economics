@@ -12,6 +12,8 @@ library(readxl)
 library(tidyverse)
 library(janitor)
 library(networkD3)
+library(plotly)
+library(scales)
 
 path_to_file <- "51134-2025-01-Historical-Budget-Data.xlsx"
 ```
@@ -101,7 +103,7 @@ rev_sankey
 saveNetwork(rev_sankey, file = "rev.sankey.html")
 ```
 
-```{r Expense Sankey}
+```{r Outlay Sankey}
 # — EXPENSE Sankey —
 tier1 <- c(
   "Discretionary",
@@ -167,3 +169,69 @@ exp_sankey
 saveNetwork(exp_sankey, file = "exp_sankey.html")
 ```
 
+```{r Receipts Barchart}
+# Prep data
+df_totals <- df_cbo_budget_receipts %>%
+  group_by(fiscal_year) %>%
+  summarize(total_amount = sum(amount), .groups = "drop")
+
+df_plot <- df_cbo_budget_receipts %>%
+  left_join(df_totals, by = "fiscal_year") %>%
+  mutate(
+    pct = amount / total_amount,
+    hover_text = paste0(
+      "Year: ", fiscal_year,
+      "<br>Category: ", category,
+      "<br>Amount: $", comma(amount, accuracy = 0.1),
+      "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+    )
+  )
+
+# Create plot
+plot_ly(df_plot, x = ~fiscal_year, y = ~amount, color = ~category, type = 'bar',
+        text = ~hover_text,
+        textposition = "none",  
+        hoverinfo = 'text') %>%
+  layout(
+    barmode = 'stack',
+    title = 'Federal Revenue by Category (Interactive)',
+    xaxis = list(title = "Fiscal Year"),
+    yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+    legend = list(title = list(text = "Category"))
+  )
+```
+
+```{r Outlays Barchart}
+# Summarize total outlays per year
+df_outlay_totals <- df_cbo_budget_outlays %>%
+  filter(!category %in% c("Discretionary", "Programmatic Outlays")) %>% 
+  group_by(fiscal_year) %>%
+  summarize(total_amount = sum(amount), .groups = "drop")
+
+# Prep for plot
+df_outlays_plot <- df_cbo_budget_outlays %>%
+  filter(!category %in% c("Discretionary", "Programmatic Outlays")) %>% 
+  left_join(df_outlay_totals, by = "fiscal_year") %>%
+  mutate(
+    pct = amount / total_amount,
+    hover_text = paste0(
+      "Year: ", fiscal_year,
+      "<br>Category: ", category,
+      "<br>Amount: $", comma(amount, accuracy = 0.01),
+      "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+    )
+  )
+
+# Plot
+plot_ly(df_outlays_plot, x = ~fiscal_year, y = ~amount, color = ~category, type = 'bar',
+        text = ~hover_text,
+        textposition = "none",  
+        hoverinfo = 'text') %>%
+  layout(
+    barmode = 'stack',
+    title = 'Federal Outlays by Category (Interactive)',
+    xaxis = list(title = "Fiscal Year"),
+    yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+    legend = list(title = list(text = "Category"))
+  )
+```

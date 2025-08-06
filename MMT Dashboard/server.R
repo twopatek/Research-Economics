@@ -431,6 +431,150 @@ server <- function(input, output, session) {
     )
   })
   
+  # ---------------------------------------------------------------
+  # Historical Budget Bar chart Logic
+  # ---------------------------------------------------------------
+  output$historical_receipts_bar <- renderPlotly({
+    
+    # Compute total receipts per fiscal year
+    df_receipt_totals <- df_cbo_budget_receipts %>%
+      group_by(fiscal_year) %>%
+      summarize(total_amount = sum(amount), .groups = "drop")
+    
+    # Prepare data with percent of total and hover text
+    df_receipts_plot <- df_cbo_budget_receipts %>%
+      left_join(df_receipt_totals, by = "fiscal_year") %>%
+      mutate(
+        pct = amount / total_amount,
+        hover_text = paste0(
+          "Year: ", fiscal_year,
+          "<br>Category: ", category,
+          "<br>Amount: $", comma(amount, accuracy = 0.01),
+          "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+        )
+      )
+    
+    # Plot it
+    plot_ly(df_receipts_plot, x = ~fiscal_year, y = ~amount, color = ~category, type = 'bar',
+            text = ~hover_text,
+            textposition = "none",  
+            hoverinfo = 'text') %>%
+      layout(
+        barmode = 'stack',
+        title = 'Projected Federal Receipts by Category (Interactive)',
+        xaxis = list(title = "Fiscal Year"),
+        yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+        legend = list(title = list(text = "Category"))
+      )
+  })
+  
+  output$historical_outlays_bar <- renderPlotly({
+    # Summarize total outlays per year
+    df_outlay_totals <- df_cbo_budget_outlays %>%
+      filter(!category %in% c("Discretionary", "Programmatic Outlays")) %>% 
+      group_by(fiscal_year) %>%
+      summarize(total_amount = sum(amount), .groups = "drop")
+    
+    # Prep for plot
+    df_outlays_plot <- df_cbo_budget_outlays %>%
+      filter(!category %in% c("Discretionary", "Programmatic Outlays")) %>% 
+      left_join(df_outlay_totals, by = "fiscal_year") %>%
+      mutate(
+        pct = amount / total_amount,
+        hover_text = paste0(
+          "Year: ", fiscal_year,
+          "<br>Category: ", category,
+          "<br>Amount: $", comma(amount, accuracy = 0.01),
+          "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+        )
+      )
+    
+    # Plot
+    plot_ly(df_outlays_plot, x = ~fiscal_year, y = ~amount, color = ~category, type = 'bar',
+            text = ~hover_text,
+            textposition = "none",  
+            hoverinfo = 'text') %>%
+      layout(
+        barmode = 'stack',
+        title = 'Federal Outlays by Category (Interactive)',
+        xaxis = list(title = "Fiscal Year"),
+        yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+        legend = list(title = list(text = "Category"))
+      )
+  })
+  
+  # ---------------------------------------------------------------
+  # Projections Budget Bar chart Logic
+  # ---------------------------------------------------------------
+  output$projection_receipts_bar <- renderPlotly({
+    # Compute total receipts per fiscal year
+    df_receipt_totals <- df_cbo_projections_receipts %>%
+      group_by(Year) %>%
+      summarize(total_amount = sum(Amount), .groups = "drop")
+    
+    # Prepare data with percent of total and hover text
+    df_receipts_plot <- df_cbo_projections_receipts %>%
+      left_join(df_receipt_totals, by = "Year") %>%
+      mutate(
+        pct = Amount / total_amount,
+        hover_text = paste0(
+          "Year: ", Year,
+          "<br>Category: ", Category,
+          "<br>Amount: $", comma(Amount, accuracy = 0.01),
+          "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+        )
+      )
+    
+    # Plot it
+    plot_ly(df_receipts_plot, x = ~Year, y = ~Amount, color = ~Category, type = 'bar',
+            text = ~hover_text,
+            textposition = "none",  
+            hoverinfo = 'text') %>%
+      layout(
+        barmode = 'stack',
+        title = 'Projected Federal Receipts by Category (Interactive)',
+        xaxis = list(title = "Fiscal Year"),
+        yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+        legend = list(title = list(text = "Category"))
+      )
+  })
+  
+  output$projection_outlays_bar <- renderPlotly({
+    # Compute total outlays per year
+    df_outlay_totals <- df_cbo_projections_joined_outlays %>%
+      group_by(Year) %>%
+      summarize(total_amount = sum(Amount), .groups = "drop")
+    
+    # Prepare data
+    df_outlays_plot <- df_cbo_projections_joined_outlays %>%
+      left_join(df_outlay_totals, by = "Year") %>%
+      mutate(
+        pct = Amount / total_amount,
+        hover_text = paste0(
+          "Year: ", Year,
+          "<br>Category: ", Category,
+          "<br>Amount: $", comma(Amount, accuracy = 0.01),
+          "<br>Share of Total: ", percent(pct, accuracy = 0.1)
+        )
+      )
+    
+    # Plot
+    plot_ly(df_outlays_plot,
+            x = ~Year, y = ~Amount,
+            color = ~Category,
+            type = 'bar',
+            text = ~hover_text,
+            textposition = "none",  
+            hoverinfo = 'text') %>%
+      layout(
+        barmode = 'stack',
+        title = 'Projected Federal Outlays by Category (Interactive)',
+        xaxis = list(title = "Fiscal Year"),
+        yaxis = list(title = "Amount (Billions of $)", tickformat = ","),
+        legend = list(title = list(text = "Category"))
+      )
+  })
+
 }
   
 

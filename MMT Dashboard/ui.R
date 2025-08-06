@@ -85,90 +85,151 @@ ui <- dashboardPage(
               # ----------------------------
               tabPanel(
                 title = "Historical",
-                fluidRow(
-                  column(
-                    width = 3,
-                    box(
-                      width = 12,
-                      title = "Select Year",
-                      solidHeader = TRUE,
-                      status = "info",
-                      pickerInput(
-                        inputId = "historical_budget_year",
-                        label = "Budget Year:",
-                        choices = historical_budget_year_choices,
-                        selected = first(historical_budget_year_choices),
-                        multiple = FALSE
+                tabsetPanel(
+                  tabPanel(
+                    title = "Stacked Bar Charts",
+                    fluidRow(
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Receipts",
+                          solidHeader = TRUE,
+                          status = "info",
+                          plotlyOutput("historical_receipts_bar")
+                        )
+                      ),
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Outlays",
+                          solidHeader = TRUE,
+                          status = "info",
+                          plotlyOutput("historical_outlays_bar")
+                        )
                       )
                     )
-                  )
-                ),
-                fluidRow(
-                  column(
-                    width = 12,
-                    box(
-                      width = 12,
-                      title = "Receipts",
-                      solidHeader = TRUE,
-                      status = "info",
-                      sankeyNetworkOutput("historical_receipts_sankey_plot")
-                    )
                   ),
-                  column(
-                    width = 12,
-                    box(
-                      width = 12,
-                      title = "Outlays",
-                      solidHeader = TRUE,
-                      status = "info",
-                      sankeyNetworkOutput("historical_outlays_sankey_plot")
+                  tabPanel(
+                    title = "Sankey Diagrams",
+                    fluidRow(
+                      column(
+                        width = 3,
+                        box(
+                          width = 12,
+                          title = "Select Year",
+                          solidHeader = TRUE,
+                          status = "info",
+                          pickerInput(
+                            inputId = "historical_budget_year",
+                            label = "Budget Year:",
+                            choices = historical_budget_year_choices,
+                            selected = first(historical_budget_year_choices),
+                            multiple = FALSE
+                          )
+                        )
+                      )
+                    ),
+                    fluidRow(
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Receipts",
+                          solidHeader = TRUE,
+                          status = "info",
+                          sankeyNetworkOutput("historical_receipts_sankey_plot")
+                        )
+                      ),
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Outlays",
+                          solidHeader = TRUE,
+                          status = "info",
+                          sankeyNetworkOutput("historical_outlays_sankey_plot")
+                        )
+                      )
                     )
                   )
                 )
               ),
+              
               
               # ----------------------------
               # Projections Budget Subtab
               # ----------------------------
               tabPanel(
                 title = "Projections",
-                fluidRow(
-                  column(
-                    width = 3,
-                    box(
-                      width = 12,
-                      title = "Select Year",
-                      solidHeader = TRUE,
-                      status = "info",
-                      pickerInput(
-                        inputId = "projection_budget_year",
-                        label = "Projection Year:",
-                        choices = projection_budget_year_choices,
-                        selected = first(projection_budget_year_choices),
-                        multiple = FALSE
+                tabsetPanel(
+                  tabPanel(
+                    title = "Stacked Bar Charts",
+                    fluidRow(
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Receipts",
+                          solidHeader = TRUE,
+                          status = "info",
+                          plotlyOutput("projection_receipts_bar")
+                        )
+                      ),
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Outlays",
+                          solidHeader = TRUE,
+                          status = "info",
+                          plotlyOutput("projection_outlays_bar")
+                        )
                       )
                     )
-                  )
-                ),
-                fluidRow(
-                  column(
-                    width = 12,
-                    box(
-                      width = 12,
-                      title = "Receipts",
-                      solidHeader = TRUE,
-                      status = "info",
-                      sankeyNetworkOutput("projection_receipts_sankey_plot")
-                    )
                   ),
-                  column(
-                    width = 12,
-                    box(
-                      width = 12,
-                      title = "Outlays",
-                      solidHeader = TRUE,
-                      status = "info",
-                      sankeyNetworkOutput("projection_outlays_sankey_plot")
+                  tabPanel(
+                    title = "Sankey Diagrams",
+                    fluidRow(
+                      column(
+                        width = 3,
+                        box(
+                          width = 12,
+                          title = "Select Year",
+                          solidHeader = TRUE,
+                          status = "info",
+                          pickerInput(
+                            inputId = "projection_budget_year",
+                            label = "Projection Year:",
+                            choices = projection_budget_year_choices,
+                            selected = first(projection_budget_year_choices),
+                            multiple = FALSE
+                          )
+                        )
+                      )
+                    ),
+                    fluidRow(
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Receipts",
+                          solidHeader = TRUE,
+                          status = "info",
+                          sankeyNetworkOutput("projection_receipts_sankey_plot")
+                        )
+                      ),
+                      column(
+                        width = 12,
+                        box(
+                          width = 12,
+                          title = "Outlays",
+                          solidHeader = TRUE,
+                          status = "info",
+                          sankeyNetworkOutput("projection_outlays_sankey_plot")
+                        )
+                      )
                     )
                   )
                 )
