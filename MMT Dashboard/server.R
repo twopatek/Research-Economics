@@ -172,8 +172,8 @@ server <- function(input, output, session) {
   
   ccf_data <- reactive({
     req(input$lag_series1, input$lag_series2)
-    y1 <- df %>% filter(series_name == input$lag_series1) %>% arrange(date) %>% pull(value_norm)
-    y2 <- df %>% filter(series_name == input$lag_series2) %>% arrange(date) %>% pull(value_norm)
+    y1 <- df %>% filter(series_name == input$lag_series1) %>% arrange(date) %>% pull(series)
+    y2 <- df %>% filter(series_name == input$lag_series2) %>% arrange(date) %>% pull(series)
     cc <- stats::ccf(y1, y2, plot = FALSE, lag.max = input$lag_max)
     tibble(lag = as.integer(cc$lag), acf = as.numeric(cc$acf))
   })
@@ -217,10 +217,10 @@ server <- function(input, output, session) {
 
   output$historical_receipts_sankey_plot <- renderSankeyNetwork({
     # nodes & links for revenue breakdown
-    rev_nodes <- data.frame(name = c(receipts_subset()$category, "Total Revenue"), stringsAsFactors = FALSE)
+    rev_nodes <- data.frame(name = c(receipts_subset()$category, "Total Receipts"), stringsAsFactors = FALSE)
     rev_idx   <- function(x) match(x, rev_nodes$name) - 1
     rev_links <- receipts_subset() %>% transmute(
-      source = rev_idx("Total Revenue"),
+      source = rev_idx("Total Receipts"),
       target = rev_idx(category),
       value  = amount
     )
@@ -259,7 +259,7 @@ server <- function(input, output, session) {
     )
 
     exp_nodes <- data.frame(
-      name = c("Total Expense", tier1, tier2a, tier2b),
+      name = c("Total Outlays", tier1, tier2a, tier2b),
       stringsAsFactors = FALSE
     )
     exp_idx <- function(x) match(x, exp_nodes$name) - 1
@@ -267,7 +267,7 @@ server <- function(input, output, session) {
     # Tier 1 links
     exp_t1 <- outlays_subset() %>% filter(category %in% tier1) %>%
       transmute(
-        source = exp_idx("Total Expense"),
+        source = exp_idx("Total Outlays"),
         target = exp_idx(category),
         value  = amount
       )
@@ -314,7 +314,7 @@ server <- function(input, output, session) {
     
     # Step 2: Create nodes
     receipts_nodes <- data.frame(
-      name = c("Total Revenue", unique(receipts_sub$Category)),
+      name = c("Total Receipts", unique(receipts_sub$Category)),
       stringsAsFactors = FALSE
     )
     
@@ -324,7 +324,7 @@ server <- function(input, output, session) {
     # Step 4: Create links (from Total Revenue to each category)
     receipts_links <- receipts_sub %>%
       transmute(
-        source = receipts_idx("Total Revenue"),
+        source = receipts_idx("Total Receipts"),
         target = receipts_idx(Category),
         value  = Amount
       )
@@ -360,7 +360,7 @@ server <- function(input, output, session) {
     
     # Create node list
     exp_nodes <- data.frame(
-      name = c("Total Expense", tier1, tier2b),
+      name = c("Total Outlays", tier1, tier2b),
       stringsAsFactors = FALSE
     )
     
@@ -370,7 +370,7 @@ server <- function(input, output, session) {
     exp_t1 <- exp_sub %>%
       filter(Category %in% c("Discretionary", "Offsetting Receipts", "Net interest")) %>%
       transmute(
-        source = exp_idx("Total Expense"),
+        source = exp_idx("Total Outlays"),
         target = exp_idx(Category),
         value  = Amount
       )
@@ -380,7 +380,7 @@ server <- function(input, output, session) {
       filter(Category %in% tier2b) %>%
       summarise(value = sum(Amount, na.rm = TRUE)) %>%
       mutate(
-        source = exp_idx("Total Expense"),
+        source = exp_idx("Total Outlays"),
         target = exp_idx("Programmatic Outlays")
       )
     

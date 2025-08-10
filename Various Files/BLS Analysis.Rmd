@@ -6,13 +6,21 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = "C:/Users/MatthewAdams/Eduserve Solutions/FPATeam - Documents/Matthew Adams/Personal Doc/Economics")
+# knitr::opts_knit$set(root.dir = "C:/Users/MatthewAdams/Eduserve Solutions/FPATeam - Documents/Matthew Adams/Personal Doc/Economics")
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(fig.height = 5, fig.width = 10)
 
-pacman::p_load(tidyverse, readxl, janitor, RColorBrewer, scales, eFRED, lubdridate, plotly)
+# pacman::p_load(tidyverse, readxl, janitor, RColorBrewer, scales, eFRED, lubdridate, plotly)
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(RColorBrewer)
+library(scales)
+library(eFRED)
+library(plotly)
 ```
 
 ```{r data}
